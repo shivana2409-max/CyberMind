@@ -108,6 +108,79 @@ body::after {
   gap: 1rem;
 }
 
+.logo-frame {
+  display: grid;
+  place-items: center;
+  width: min(240px, 44vw);
+  aspect-ratio: 1;
+  margin: 0 auto 0.35rem;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at center, rgba(68, 255, 115, 0.07), rgba(0, 0, 0, 0.96) 68%);
+  box-shadow:
+    inset 0 0 0 1px rgba(67, 255, 118, 0.2),
+    0 0 34px rgba(68, 255, 115, 0.09);
+}
+
+.cyber-logo {
+  width: 90%;
+  height: auto;
+  filter:
+    drop-shadow(0 0 4px rgba(68, 255, 115, 0.82))
+    drop-shadow(0 0 18px rgba(68, 255, 115, 0.14));
+}
+
+.logo-ring,
+.logo-globe,
+.logo-grid,
+.logo-laurel,
+.logo-body,
+.logo-suit,
+.logo-tie,
+.logo-head {
+  fill: none;
+  stroke: #6fff8d;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.logo-ring {
+  stroke-width: 5;
+}
+
+.logo-globe {
+  stroke-width: 2.8;
+  opacity: 0.75;
+}
+
+.logo-grid {
+  stroke-width: 1.8;
+  opacity: 0.52;
+}
+
+.logo-laurel {
+  stroke-width: 3;
+}
+
+.logo-body,
+.logo-head,
+.logo-suit {
+  fill: rgba(111, 255, 141, 0.06);
+  stroke-width: 3;
+}
+
+.logo-tie {
+  fill: rgba(111, 255, 141, 0.12);
+  stroke-width: 2.3;
+}
+
+.logo-question {
+  font-family: "Archivo Black", sans-serif;
+  font-size: 42px;
+  fill: #c9ffd6;
+  text-shadow: 0 0 12px rgba(68, 255, 115, 0.3);
+}
+
 .eyebrow,
 .canvas-label {
   margin: 0;
