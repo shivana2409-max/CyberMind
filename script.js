@@ -369,7 +369,7 @@ chatForm.addEventListener("submit", async (event) => {
     const answer = await askCyberMind(message);
     addChatBubble("assistant", answer);
   } catch (error) {
-    addChatBubble("assistant", `No pude hablar con OpenAI: ${error.message}`);
+    addChatBubble("assistant", `La micro-API interna fallo: ${error.message}`);
   }
 });
 

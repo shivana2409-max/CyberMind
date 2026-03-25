@@ -99,6 +99,18 @@ const forbiddenPatterns = [
   /phishing/i
 ];
 
+const casualPatterns = [
+  /\bhola\b/i,
+  /\bbuenas\b/i,
+  /\bholi\b/i,
+  /\bhey\b/i,
+  /\bhi\b/i,
+  /\bhello\b/i,
+  /\bxd\b/i,
+  /\bjaja\b/i,
+  /\bjeje\b/i
+];
+
 let memory = loadMemory();
 let ephemeralApis = new Map();
 
@@ -208,6 +220,10 @@ function shouldAskClarifyingQuestion(message) {
   return raw.length < 12 || tokenize(raw).length < 2;
 }
 
+function isCasualMessage(message) {
+  return casualPatterns.some((pattern) => pattern.test(message));
+}
+
 function detectSafetyIssue(message) {
   for (const pattern of forbiddenPatterns) {
     if (pattern.test(message)) {
@@ -239,6 +255,18 @@ function buildClarifyingResponse(theme) {
     model: "cybermind-core",
     learned: false,
     apiUtility: "clarify-context"
+  };
+}
+
+function buildCasualResponse() {
+  return {
+    answer:
+      "CyberMind te saluda de vuelta. Si quieres, podemos conversar tranqui o meternos en algo mas profundo; cuentame que tienes en mente.",
+    visualSeed: "bienvenida ligera apertura",
+    theme: "Conexion inicial",
+    model: "cybermind-core",
+    learned: false,
+    apiUtility: "social-greeting"
   };
 }
 
@@ -299,6 +327,10 @@ function generateLocalResponse(message) {
     return buildSafetyResponse();
   }
 
+  if (isCasualMessage(message)) {
+    return buildCasualResponse();
+  }
+
   const theme = findTheme(message);
 
   if (shouldAskClarifyingQuestion(message)) {
@@ -318,6 +350,8 @@ function createEphemeralApi(message) {
   let utility = "theme-reasoning";
   if (detectSafetyIssue(message)) {
     utility = "safety-guard";
+  } else if (isCasualMessage(message)) {
+    utility = "social-greeting";
   } else if (shouldAskClarifyingQuestion(message)) {
     utility = "clarify-context";
   } else if (/quiero|necesito|plan|pasos|como/i.test(normalized)) {
