@@ -270,32 +270,87 @@ function buildCasualResponse() {
   };
 }
 
+function parseSimpleMath(message) {
+  const normalized = normalizeText(message)
+    .replace(/cuanto es/g, "")
+    .replace(/cuanto da/g, "")
+    .replace(/resultado de/g, "")
+    .trim();
+
+  const match = normalized.match(/(-?\d+(?:\.\d+)?)\s*(mas|\+|menos|\-|por|\*|x|entre|\/)\s*(-?\d+(?:\.\d+)?)/);
+  if (!match) {
+    return null;
+  }
+
+  const left = Number(match[1]);
+  const operator = match[2];
+  const right = Number(match[3]);
+
+  if (Number.isNaN(left) || Number.isNaN(right)) {
+    return null;
+  }
+
+  let result;
+  if (operator === "mas" || operator === "+") {
+    result = left + right;
+  } else if (operator === "menos" || operator === "-") {
+    result = left - right;
+  } else if (operator === "por" || operator === "*" || operator === "x") {
+    result = left * right;
+  } else {
+    if (right === 0) {
+      return {
+        answer: "CyberMind no puede dividir entre cero.",
+        visualSeed: "limite matematico division",
+        theme: "Logica numerica",
+        model: "cybermind-core",
+        learned: false,
+        apiUtility: "math-solver",
+        memoryAnswer: "No puedo dividir entre cero."
+      };
+    }
+    result = left / right;
+  }
+
+  const cleanResult = Number.isInteger(result) ? String(result) : String(Number(result.toFixed(6)));
+  return {
+    answer: `CyberMind resolvio la operacion: ${left} ${operator} ${right} = ${cleanResult}.`,
+    visualSeed: "logica numero precision",
+    theme: "Logica numerica",
+    model: "cybermind-core",
+    learned: false,
+    apiUtility: "math-solver",
+    memoryAnswer: `Operacion resuelta: ${cleanResult}.`
+  };
+}
+
 function composeAnswer(message, theme, memoryMatch) {
   const normalized = normalizeText(message);
   const mentionsQuestion = message.includes("?");
   const wantsAdvice = /(que hago|que hago ahora|consejo|ayuda|opinion)/i.test(message);
 
-  let answer = theme.answer;
+  let baseAnswer = theme.answer;
 
   if (memoryMatch.item && memoryMatch.score >= 0.34) {
     memoryMatch.item.uses = (memoryMatch.item.uses || 0) + 1;
-    answer = `${theme.answer} Tambien veo parecido con algo que CyberMind ya aprendio: ${memoryMatch.item.answer}`;
+    baseAnswer = `${theme.answer} Tambien veo parecido con algo que CyberMind ya aprendio: ${memoryMatch.item.answer}`;
   } else if (mentionsQuestion || wantsAdvice) {
-    answer = `${theme.answer} Si lo conviertes en una pregunta practica, mi lectura es elegir una accion corta, visible y medible para hoy.`;
+    baseAnswer = `${theme.answer} Si lo conviertes en una pregunta practica, mi lectura es elegir una accion corta, visible y medible para hoy.`;
   } else if (/xd|jaja|jeje|hola|buenas/.test(normalized)) {
-    answer =
+    baseAnswer =
       "CyberMind te lee con energia ligera. Si quieres solo conversar, aqui estoy; si quieres profundidad, cuentame que te ronda por dentro o que quieres construir.";
   } else if (/quiero|necesito|me gustaria/.test(normalized)) {
-    answer = `${theme.answer} Como ya hay una intencion clara, el siguiente paso es bajar eso a una accion concreta en las proximas 24 horas.`;
+    baseAnswer = `${theme.answer} Como ya hay una intencion clara, el siguiente paso es bajar eso a una accion concreta en las proximas 24 horas.`;
   }
 
   return {
-    answer,
+    answer: baseAnswer,
     visualSeed: theme.visualSeed,
     theme: theme.name,
     model: "cybermind-core",
     learned: Boolean(memoryMatch.item && memoryMatch.score >= 0.34),
-    apiUtility: memoryMatch.item && memoryMatch.score >= 0.34 ? "memory-merge" : "theme-reasoning"
+    apiUtility: memoryMatch.item && memoryMatch.score >= 0.34 ? "memory-merge" : "theme-reasoning",
+    memoryAnswer: baseAnswer
   };
 }
 
@@ -308,7 +363,7 @@ function learnFromExchange(message, response) {
   memory.push({
     id: `m-${Date.now()}`,
     question: message,
-    answer: response.answer,
+    answer: response.memoryAnswer || response.answer,
     theme: response.theme,
     visualSeed: response.visualSeed,
     tokens,
@@ -329,6 +384,11 @@ function generateLocalResponse(message) {
 
   if (isCasualMessage(message)) {
     return buildCasualResponse();
+  }
+
+  const mathResponse = parseSimpleMath(message);
+  if (mathResponse) {
+    return mathResponse;
   }
 
   const theme = findTheme(message);
