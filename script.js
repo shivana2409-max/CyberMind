@@ -58,7 +58,6 @@ const semanticThemes = [
 
 const state = {
   responseCount: 0,
-  previousResponseId: null,
   latestVisualSeed: "calma y futuro"
 };
 
@@ -317,7 +316,7 @@ function setBusy(isBusy) {
 
 async function askCyberMind(message) {
   setBusy(true);
-  mindState.textContent = "Consultando a OpenAI";
+  mindState.textContent = "Pensando con motor local";
 
   try {
     const response = await fetch("/api/chat", {
@@ -326,8 +325,7 @@ async function askCyberMind(message) {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        message,
-        previousResponseId: state.previousResponseId
+        message
       })
     });
 
@@ -337,10 +335,9 @@ async function askCyberMind(message) {
       throw new Error(data.error || "No se pudo obtener respuesta del modelo.");
     }
 
-    state.previousResponseId = data.responseId || null;
     state.responseCount += 1;
     shapeCount.textContent = String(state.responseCount);
-    apiStatus.textContent = `Conectado a ${data.model}`;
+    apiStatus.textContent = data.apiName || (data.learned ? "Micro-API de memoria" : "Micro-API activa");
     mindState.textContent = "Respuesta recibida";
 
     const visualSeed = data.visualSeed || data.answer || message;
@@ -350,7 +347,7 @@ async function askCyberMind(message) {
 
     return data.answer;
   } catch (error) {
-    apiStatus.textContent = "Error de conexion";
+    apiStatus.textContent = "Micro-API fallida";
     mindState.textContent = "No se pudo responder";
     throw error;
   } finally {
@@ -384,10 +381,9 @@ clearCanvasButton.addEventListener("click", () => {
 
 clearChatButton.addEventListener("click", async () => {
   chatLog.innerHTML = "";
-  state.previousResponseId = null;
   state.responseCount = 0;
   shapeCount.textContent = "0";
-  apiStatus.textContent = "Conversacion reiniciada";
+  apiStatus.textContent = "Sin crear";
   mindState.textContent = "Memoria borrada";
   addChatBubble("assistant", "Conversacion reiniciada. Puedes empezar desde cero.");
 
@@ -425,4 +421,4 @@ sizeValue.textContent = sizeControl.value;
 strokeValue.textContent = strokeControl.value;
 densityValue.textContent = densityControl.value;
 renderSemanticScene(state.latestVisualSeed);
-addChatBubble("assistant", "Soy CyberMind. Estoy lista para responder con OpenAI y transformar cada respuesta en una composicion abstracta.");
+addChatBubble("assistant", "Soy CyberMind. Ahora funciono con una IA local propia: aprendo de las conversaciones, respondo sin depender de servicios externos y mantengo limites de seguridad.");
