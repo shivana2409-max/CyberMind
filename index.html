@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CyberMind IA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <section class="panel intro-panel">
+      <p class="eyebrow">CyberMind + OpenAI</p>
+      <h1>CyberMind IA</h1>
+      <p class="lead">
+        Un chat visual: le preguntas algo real, responde con OpenAI y transforma la idea
+        principal en una composicion abstracta con coherencia visual.
+      </p>
+
+      <div class="controls">
+        <button id="clearCanvas" class="btn btn-secondary" type="button">Limpiar lienzo</button>
+        <button id="clearChat" class="btn btn-secondary" type="button">Nueva conversacion</button>
+        <button id="repaintButton" class="btn btn-primary" type="button">Repintar respuesta</button>
+      </div>
+
+      <label class="prompt-box" for="inspirationInput">
+        <span>Semilla visual manual</span>
+        <input id="inspirationInput" type="text" value="calma y futuro" maxlength="120">
+      </label>
+
+      <div class="tuning-grid">
+        <label class="slider-box" for="sizeControl">
+          <span>Tamano base</span>
+          <input id="sizeControl" type="range" min="20" max="180" value="90">
+          <strong id="sizeValue">90</strong>
+        </label>
+        <label class="slider-box" for="strokeControl">
+          <span>Grosor base</span>
+          <input id="strokeControl" type="range" min="1" max="16" value="4">
+          <strong id="strokeValue">4</strong>
+        </label>
+        <label class="slider-box" for="densityControl">
+          <span>Densidad</span>
+          <input id="densityControl" type="range" min="3" max="14" value="7">
+          <strong id="densityValue">7</strong>
+        </label>
+      </div>
+    </section>
+
+    <section class="panel status-panel">
+      <article class="metric">
+        <span class="metric-label">Estado del sistema</span>
+        <strong id="mindState">Esperando tu primera pregunta</strong>
+      </article>
+      <article class="metric">
+        <span class="metric-label">Ultima lectura</span>
+        <strong id="lastDecision">Sin interpretar aun</strong>
+      </article>
+      <article class="metric">
+        <span class="metric-label">Tema detectado</span>
+        <strong id="themeLabel">Calma estructurada</strong>
+      </article>
+      <article class="metric">
+        <span class="metric-label">Modo visual</span>
+        <strong id="thoughtMode">Interpretativo</strong>
+      </article>
+      <article class="metric">
+        <span class="metric-label">Respuestas generadas</span>
+        <strong id="shapeCount">0</strong>
+      </article>
+      <article class="metric">
+        <span class="metric-label">Estado API</span>
+        <strong id="apiStatus">Sin conectar</strong>
+      </article>
+    </section>
+
+    <section class="studio panel">
+      <div class="canvas-header">
+        <div>
+          <p class="canvas-label">Lienzo vivo</p>
+          <h2>Abstraccion con coherencia</h2>
+        </div>
+        <p class="canvas-copy">
+          La respuesta del modelo no se dibuja de forma literal: se convierte en ritmo,
+          tension, agrupaciones, ejes y orbitas.
+        </p>
+      </div>
+
+      <canvas id="mindCanvas" width="1280" height="760" aria-label="Lienzo generativo"></canvas>
+
+      <div class="legend">
+        <span>Nodos</span>
+        <span>Orbitas</span>
+        <span>Ejes</span>
+        <span>Constelaciones</span>
+        <span>Tension</span>
+        <span>Ritmo</span>
+      </div>
+    </section>
+
+    <section class="panel chat-panel">
+      <div class="chat-header">
+        <div>
+          <p class="canvas-label">Dialogo</p>
+          <h2>Preguntale algo real</h2>
+        </div>
+        <p class="canvas-copy">
+          Si el modelo necesita mas contexto, te lo puede pedir. La conversacion mantiene
+          continuidad entre turnos.
+        </p>
+      </div>
+
+      <div id="chatLog" class="chat-log" aria-live="polite"></div>
+
+      <form id="chatForm" class="chat-form">
+        <textarea id="chatInput" rows="3" placeholder="Ejemplo: Estoy confundido entre seguir con mi proyecto o buscar otra direccion"></textarea>
+        <button class="btn btn-primary" id="sendButton" type="submit">Preguntar</button>
+      </form>
+    </section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
