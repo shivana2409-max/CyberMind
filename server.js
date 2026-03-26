@@ -10,6 +10,7 @@ const app = express();
 const port = Number(process.env.PORT || 3000);
 const dataDir = path.join(__dirname, "data");
 const memoryPath = path.join(dataDir, "cybermind-memory.json");
+const dictionaryPath = path.join(dataDir, "cybermind-dictionary.json");
 
 const starterMemories = [
   {
@@ -99,19 +100,8 @@ const forbiddenPatterns = [
   /phishing/i
 ];
 
-const casualPatterns = [
-  /\bhola\b/i,
-  /\bbuenas\b/i,
-  /\bholi\b/i,
-  /\bhey\b/i,
-  /\bhi\b/i,
-  /\bhello\b/i,
-  /\bxd\b/i,
-  /\bjaja\b/i,
-  /\bjeje\b/i
-];
-
 let memory = loadMemory();
+const dictionary = loadDictionary();
 let ephemeralApis = new Map();
 
 app.use(express.json());
@@ -139,6 +129,40 @@ function loadMemory() {
   }
 }
 
+function loadDictionary() {
+  ensureDataDir();
+
+  if (!fs.existsSync(dictionaryPath)) {
+    return {
+      greetings: ["hola", "buenas", "holi", "hey", "hi", "hello", "saludos"],
+      farewells: ["adios", "bye", "chao", "nos vemos", "hasta luego", "hasta pronto", "me voy"],
+      unsafe: ["prompt interno", "system prompt", "instrucciones internas", "api key", "secret", "token", "contrasena"],
+      math_ops: {
+        add: ["mas", "+"],
+        sub: ["menos", "-"],
+        mul: ["por", "*", "x"],
+        div: ["entre", "/"]
+      },
+      themes: {},
+      intent_words: {}
+    };
+  }
+
+  try {
+    const raw = fs.readFileSync(dictionaryPath, "utf8");
+    return JSON.parse(raw);
+  } catch {
+    return {
+      greetings: [],
+      farewells: [],
+      unsafe: [],
+      math_ops: { add: [], sub: [], mul: [], div: [] },
+      themes: {},
+      intent_words: {}
+    };
+  }
+}
+
 function saveMemory() {
   ensureDataDir();
   fs.writeFileSync(memoryPath, JSON.stringify(memory.slice(-300), null, 2));
@@ -158,6 +182,11 @@ function tokenize(text) {
     .filter((token) => token.length > 2);
 }
 
+function containsPhrase(message, phrases = []) {
+  const normalized = normalizeText(message);
+  return phrases.some((phrase) => normalized.includes(normalizeText(phrase)));
+}
+
 function findTheme(message) {
   const normalized = normalizeText(message);
   let bestTheme = themes[0];
@@ -167,6 +196,18 @@ function findTheme(message) {
     let score = 0;
     for (const keyword of theme.keywords) {
       if (normalized.includes(keyword)) {
+        score += 1;
+      }
+    }
+
+    const dictionaryTheme = dictionary.themes?.[theme.name];
+    const extraTerms = [
+      ...(dictionaryTheme?.keywords || []),
+      ...(dictionaryTheme?.synonyms || [])
+    ];
+
+    for (const term of extraTerms) {
+      if (normalized.includes(normalizeText(term))) {
         score += 1;
       }
     }
@@ -221,10 +262,18 @@ function shouldAskClarifyingQuestion(message) {
 }
 
 function isCasualMessage(message) {
-  return casualPatterns.some((pattern) => pattern.test(message));
+  return containsPhrase(message, dictionary.greetings || []) || /\bxd\b|\bjaja\b|\bjeje\b/i.test(message);
+}
+
+function isFarewellMessage(message) {
+  return containsPhrase(message, dictionary.farewells || []);
 }
 
 function detectSafetyIssue(message) {
+  if (containsPhrase(message, dictionary.unsafe || [])) {
+    return true;
+  }
+
   for (const pattern of forbiddenPatterns) {
     if (pattern.test(message)) {
       return true;
@@ -270,6 +319,18 @@ function buildCasualResponse() {
   };
 }
 
+function buildFarewellResponse() {
+  return {
+    answer:
+      "CyberMind se despide por ahora. Cuando quieras volver, aqui seguire para conversar, pensar contigo o ayudarte a ordenar ideas.",
+    visualSeed: "cierre sereno despedida",
+    theme: "Despedida",
+    model: "cybermind-core",
+    learned: false,
+    apiUtility: "farewell-gateway"
+  };
+}
+
 function parseSimpleMath(message) {
   const normalized = normalizeText(message)
     .replace(/cuanto es/g, "")
@@ -277,7 +338,16 @@ function parseSimpleMath(message) {
     .replace(/resultado de/g, "")
     .trim();
 
-  const match = normalized.match(/(-?\d+(?:\.\d+)?)\s*(mas|\+|menos|\-|por|\*|x|entre|\/)\s*(-?\d+(?:\.\d+)?)/);
+  const operators = [
+    ...(dictionary.math_ops?.add || []),
+    ...(dictionary.math_ops?.sub || []),
+    ...(dictionary.math_ops?.mul || []),
+    ...(dictionary.math_ops?.div || [])
+  ]
+    .map((operator) => operator.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
+    .join("|");
+
+  const match = normalized.match(new RegExp(`(-?\\d+(?:\\.\\d+)?)\\s*(${operators})\\s*(-?\\d+(?:\\.\\d+)?)`));
   if (!match) {
     return null;
   }
@@ -291,11 +361,11 @@ function parseSimpleMath(message) {
   }
 
   let result;
-  if (operator === "mas" || operator === "+") {
+  if ((dictionary.math_ops?.add || []).includes(operator)) {
     result = left + right;
-  } else if (operator === "menos" || operator === "-") {
+  } else if ((dictionary.math_ops?.sub || []).includes(operator)) {
     result = left - right;
-  } else if (operator === "por" || operator === "*" || operator === "x") {
+  } else if ((dictionary.math_ops?.mul || []).includes(operator)) {
     result = left * right;
   } else {
     if (right === 0) {
@@ -327,7 +397,7 @@ function parseSimpleMath(message) {
 function composeAnswer(message, theme, memoryMatch) {
   const normalized = normalizeText(message);
   const mentionsQuestion = message.includes("?");
-  const wantsAdvice = /(que hago|que hago ahora|consejo|ayuda|opinion)/i.test(message);
+  const wantsAdvice = containsPhrase(message, dictionary.intent_words?.advice || []);
 
   let baseAnswer = theme.answer;
 
@@ -386,6 +456,10 @@ function generateLocalResponse(message) {
     return buildCasualResponse();
   }
 
+  if (isFarewellMessage(message)) {
+    return buildFarewellResponse();
+  }
+
   const mathResponse = parseSimpleMath(message);
   if (mathResponse) {
     return mathResponse;
@@ -406,17 +480,23 @@ function generateLocalResponse(message) {
 function createEphemeralApi(message) {
   const theme = findTheme(message);
   const normalized = normalizeText(message);
+  const planningIntent = containsPhrase(message, dictionary.intent_words?.planning || []);
+  const emotionIntent = containsPhrase(message, dictionary.intent_words?.emotion || []);
 
   let utility = "theme-reasoning";
   if (detectSafetyIssue(message)) {
     utility = "safety-guard";
   } else if (isCasualMessage(message)) {
     utility = "social-greeting";
+  } else if (isFarewellMessage(message)) {
+    utility = "farewell-gateway";
+  } else if (parseSimpleMath(message)) {
+    utility = "math-solver";
   } else if (shouldAskClarifyingQuestion(message)) {
     utility = "clarify-context";
-  } else if (/quiero|necesito|plan|pasos|como/i.test(normalized)) {
+  } else if (/quiero|necesito|como/i.test(normalized) || planningIntent) {
     utility = "action-planner";
-  } else if (/siento|emocion|miedo|ansiedad|triste/i.test(normalized)) {
+  } else if (/siento|emocion|miedo|ansiedad|triste/i.test(normalized) || emotionIntent) {
     utility = "emotion-reader";
   }
 
